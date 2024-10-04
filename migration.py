@@ -4,10 +4,8 @@ from dotenv import load_dotenv
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, expr, from_unixtime, when, to_timestamp, lit
 
-# Load environment variables from .env file
 load_dotenv()
 
-# Database configuration from environment variables
 DB_CONFIG = {
     "url": os.getenv("DB_URL"),
     "user": os.getenv("DB_USER"),
@@ -15,7 +13,6 @@ DB_CONFIG = {
     "driver": os.getenv("DB_DRIVER")
 }
 
-# Initialize Spark session
 spark = SparkSession.builder \
     .appName("MongoDB to PostgreSQL Migration") \
     .config("spark.jars.packages", os.getenv("SPARK_PACKAGES")) \
@@ -55,10 +52,8 @@ def convert_created_at(df):
 
 
 def main():
-    # Read data from MongoDB
     mongo_df = read_mongo_data()
 
-    # Read data from PostgreSQL
     postgres_term_df = read_postgres_table("term")
     category_df = read_postgres_table("grammatical_category")
     people_df = read_postgres_table("people")
@@ -69,7 +64,6 @@ def main():
         spark.stop()
         sys.exit(1)
 
-    # Join with category, people, and language tables
     joined_df = mongo_df.alias("m") \
         .join(category_df.alias("c"), mongo_df["category"] == category_df.name, "left") \
         .join(people_df.alias("p"), mongo_df["username"] == people_df.name, "left") \
@@ -84,7 +78,6 @@ def main():
         convert_created_at(mongo_df).alias("created_at")
     )
 
-    # Write the transformed data to PostgreSQL
     joined_df.write \
         .format("jdbc") \
         .options(**DB_CONFIG) \
@@ -93,7 +86,6 @@ def main():
         .mode("append") \
         .save()
 
-    # Stop the Spark session
     spark.stop()
 
 
